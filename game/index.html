@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WILWATIKTA — Cerita Jalanan 1998</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#1a1030; font-family:Arial, Helvetica, sans-serif; color:#fff; }
+  #gl { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .hud { position:absolute; inset:0; pointer-events:none; font-size:13px; }
+  .panel { background:rgba(10,8,20,.78); border:1px solid rgba(255,255,255,.14); border-radius:10px; backdrop-filter:blur(2px); }
+  .gold { color:#ffb400; } .green { color:#37e07a; } .red { color:#ff4d4d; }
+  .small { font-size:11px; color:#cfc8e0; } .tiny { font-size:10px; color:#9a92b5; letter-spacing:.08em; }
+
+  /* ---- top-left: minimap ---- */
+  #minimap-wrap { position:absolute; top:12px; left:12px; width:150px; }
+  #minimap { width:150px; height:150px; border-radius:50%; border:3px solid #ffb400; background:#2a2140; display:block; }
+  #street-label { margin-top:4px; background:rgba(10,8,20,.78); border-radius:6px; padding:3px 8px; font-weight:bold; font-size:12px; }
+  #rep-row { margin-top:3px; background:rgba(10,8,20,.78); border-radius:6px; padding:4px 8px; font-size:11px; }
+  #rep-bar { height:5px; background:#3a3350; border-radius:3px; margin-top:3px; }
+  #rep-fill { height:100%; width:82%; background:#37e07a; border-radius:3px; }
+
+  /* ---- top-right stack (reference layout) ---- */
+  #topright { position:absolute; top:10px; right:12px; width:330px; text-align:right; }
+  #clock { font-size:15px; font-weight:bold; letter-spacing:.06em; text-shadow:0 2px 4px #000; }
+  #clock .day { font-size:11px; color:#d8d2ea; font-weight:normal; }
+  #money { font-size:34px; font-weight:900; color:#3dff7e; text-shadow:0 0 2px #003311, 0 2px 0 #062, 0 3px 6px rgba(0,0,0,.7); letter-spacing:.01em; line-height:1.05; }
+  #stars { font-size:24px; letter-spacing:2px; line-height:1.1; text-shadow:0 2px 4px #000; }
+  #stars .on { color:#ffb400; } #stars .off { color:transparent; -webkit-text-stroke:1.6px #cfc8e0; }
+  #sight-row { margin-top:2px; font-size:11px; color:#e8e2f5; text-shadow:0 1px 3px #000; }
+  #sight-badge { display:inline-block; background:#e01e1e; color:#fff; font-weight:900; font-size:11px; padding:2px 8px; border-radius:4px; letter-spacing:.05em; }
+  #slots { display:flex; gap:6px; justify-content:flex-end; margin-top:6px; }
+  .slot { width:58px; background:rgba(12,10,24,.85); border:1.5px solid rgba(255,255,255,.25); border-radius:8px; padding:5px 2px 4px; text-align:center; }
+  .slot.active { background:#ff8c1a; border-color:#ffb400; }
+  .slot .num { display:block; font-size:10px; color:#bdb4d8; text-align:left; padding-left:5px; }
+  .slot.active .num { color:#fff; }
+  .slot svg { width:34px; height:20px; display:block; margin:1px auto; }
+  .slot .wname { display:block; font-size:9px; font-weight:bold; letter-spacing:.02em; }
+  .slot .wammo { display:block; font-size:9px; color:#bdb4d8; }
+  .slot.active .wammo { color:#ffe9cc; }
+  #active-weapon { margin-top:3px; font-size:13px; font-weight:bold; letter-spacing:.06em; text-shadow:0 1px 3px #000; text-align:center; padding-right:120px; }
+  #ammo-line { display:none; }
+
+  /* ---- bottom-right: radio above car box ---- */
+  #bottomright { position:absolute; right:12px; bottom:12px; width:330px; }
+  #radio-box { background:rgba(12,10,24,.85); border:1.5px solid rgba(255,120,200,.45); border-left:4px solid #ff4da6; border-radius:8px; padding:8px 10px; margin-bottom:8px; }
+  #radio-box .st { color:#ff7fd0; font-weight:900; font-size:13px; letter-spacing:.03em; }
+  #radio-box .song { font-size:12px; color:#e8e2f5; margin-top:1px; }
+  #radio-box .eq { float:right; display:flex; gap:2px; align-items:flex-end; height:18px; }
+  #radio-box .eq i { width:4px; background:#ff4da6; display:block; }
+  #car-box { background:rgba(12,10,24,.88); border:1.5px solid rgba(255,255,255,.16); border-radius:10px; padding:10px 12px 8px; }
+  #car-box .cname { font-size:15px; font-weight:900; color:#ffb400; letter-spacing:.04em; }
+  #car-box .cond { font-size:10px; color:#9a92b5; letter-spacing:.1em; margin-top:2px; }
+  #cond-bar { height:7px; background:#3a3350; border-radius:4px; margin-top:3px; }
+  #cond-fill { height:100%; width:100%; background:#37e07a; border-radius:4px; }
+  #cond-pct { float:right; font-size:11px; color:#e8e2f5; }
+  #speed-row { display:flex; align-items:baseline; margin-top:4px; }
+  #speed { font-size:46px; font-weight:900; line-height:1; }
+  #speed-unit { font-size:15px; font-weight:bold; color:#ffb400; margin-left:5px; }
+  #gear { margin-left:auto; background:#ffb400; color:#1a1030; font-weight:900; font-size:14px; padding:3px 9px; border-radius:6px; }
+
+  /* ---- left: mission panel ---- */
+  #mission { position:absolute; left:12px; top:215px; width:220px; padding:10px 12px; }
+  #mission h3 { font-size:10px; letter-spacing:.14em; color:#ffb400; font-weight:900; }
+  #mission h2 { font-size:17px; font-weight:900; color:#ffb400; line-height:1.15; margin:2px 0 6px; }
+  #mission p { font-size:12px; line-height:1.35; color:#e8e2f5; }
+  #mission .timer { display:flex; justify-content:space-between; font-size:13px; font-weight:bold; margin-top:8px; }
+  #mission .mbar { height:6px; background:#3a3350; border-radius:3px; margin-top:4px; }
+  #mission .mfill { height:100%; width:38%; background:#ffb400; border-radius:3px; }
+  #mission .next { font-size:11px; color:#cfc8e0; margin-top:8px; line-height:1.4; }
+  #mission .health-lbl { font-size:11px; margin-top:8px; }
+  #health-bar { height:7px; background:#3a3350; border-radius:4px; margin-top:3px; }
+  #health-fill { height:100%; width:100%; background:#37e07a; border-radius:4px; }
+
+  /* ---- bottom-center: dialogue ---- */
+  #dialogue { position:absolute; left:50%; transform:translateX(-50%); bottom:118px; width:480px; padding:10px 12px; display:flex; gap:10px; align-items:center; }
+  #dialogue canvas { width:52px; height:52px; border-radius:8px; background:#2a2140; flex:none; }
+  #dialogue .who { font-size:13px; } #dialogue .who b { color:#ffb400; }
+  #dialogue .say { font-size:13px; color:#fff; margin-top:2px; }
+
+  /* ---- bottom: crew row ---- */
+  #crew { position:absolute; left:12px; bottom:12px; display:flex; gap:10px; }
+  .mate { width:64px; text-align:center; }
+  .mate canvas { width:64px; height:64px; border-radius:10px; border:2px solid rgba(255,255,255,.25); background:#2a2140; display:block; }
+  .mate.you canvas { border-color:#ffb400; }
+  .mate .nm { font-size:11px; font-weight:900; margin-top:2px; }
+  .mate .pr { font-size:10px; color:#cfc8e0; }
+
+  /* ---- title screen ---- */
+  #title-screen { position:absolute; inset:0; pointer-events:auto; }
+  #title-screen h1 { position:absolute; left:56px; top:88px; font-family:Georgia, 'Times New Roman', serif; font-size:92px; font-weight:900; color:#ffb400; letter-spacing:.02em; text-shadow:0 3px 0 #7a4d00, 0 8px 24px rgba(0,0,0,.8); }
+  #title-screen h2 { position:absolute; left:60px; top:196px; font-size:26px; letter-spacing:.42em; font-weight:700; text-shadow:0 2px 8px #000; }
+  #title-screen .quote { position:absolute; left:60px; top:238px; font-size:15px; font-style:italic; color:#f2ecff; text-shadow:0 2px 6px #000; border-left:3px solid #ffb400; padding-left:10px; }
+  #title-btns { position:absolute; left:60px; top:300px; display:flex; flex-direction:column; gap:12px; width:230px; }
+  #title-btns button { pointer-events:auto; font-size:16px; font-weight:900; letter-spacing:.12em; padding:13px 18px; border-radius:10px; border:1.5px solid rgba(255,255,255,.35); background:rgba(12,10,24,.72); color:#fff; text-align:left; cursor:pointer; }
+  #title-btns button.primary { background:#ff8c1a; border-color:#ffb400; }
+  #title-screen .foot { position:absolute; left:20px; bottom:14px; font-size:12px; letter-spacing:.08em; color:#e8e2f5; text-shadow:0 1px 4px #000; }
+  #title-screen .credit { position:absolute; right:20px; bottom:14px; font-size:11px; text-align:right; color:#d8d2ea; text-shadow:0 1px 4px #000; line-height:1.5; }
+
+  /* ---- map screen ---- */
+  #map-screen { position:absolute; inset:0; background:rgba(8,6,16,.45); pointer-events:auto; display:none; }
+  #map-screen h1 { text-align:center; font-size:24px; letter-spacing:.1em; margin-top:14px; text-shadow:0 2px 8px #000; }
+  #map-cols { position:absolute; inset:56px 16px 96px 16px; display:flex; gap:14px; }
+  #map-missions { width:250px; padding:12px; }
+  #map-missions h3, #map-stats h3 { font-size:12px; letter-spacing:.14em; color:#ffb400; margin-bottom:8px; }
+  #map-missions ol { list-style:none; font-size:13px; line-height:1.75; }
+  #map-missions li b { color:#ffb400; float:right; }
+  #map-missions li.done { color:#9a92b5; } #map-missions li.active { color:#fff; font-weight:bold; }
+  #map-missions .job { margin-top:10px; font-size:12px; line-height:1.5; color:#e8e2f5; border-top:1px solid rgba(255,255,255,.14); padding-top:8px; }
+  #map-districts { flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:10px; }
+  .district { border-radius:10px; padding:12px; position:relative; border:1.5px solid rgba(255,255,255,.25); }
+  .district h4 { text-align:center; font-size:15px; letter-spacing:.06em; text-shadow:0 2px 4px #000; }
+  .district .poi { position:absolute; font-size:11px; text-shadow:0 1px 3px #000; }
+  .district .poi b { display:inline-block; width:20px; height:20px; line-height:20px; text-align:center; border-radius:50%; background:#fff; color:#1a1030; font-size:11px; margin-right:3px; }
+  #map-stats { width:250px; padding:12px; }
+  #map-stats table { width:100%; font-size:13px; line-height:1.8; }
+  #map-stats td:last-child { text-align:right; font-weight:bold; }
+  #map-ring { width:110px; height:110px; margin:6px auto; display:block; }
+  #map-legend { font-size:11px; line-height:1.6; margin-top:6px; }
+  #map-legend i { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; }
+  #map-btns { position:absolute; right:16px; bottom:14px; width:250px; display:flex; flex-direction:column; gap:10px; }
+  #map-btns button { pointer-events:auto; font-size:15px; font-weight:900; letter-spacing:.12em; padding:12px; border-radius:10px; border:1.5px solid rgba(255,255,255,.35); background:rgba(12,10,24,.8); color:#fff; cursor:pointer; }
+  #map-crew { position:absolute; left:12px; bottom:12px; display:flex; gap:10px; }
+
+  /* ---- pause / upgrade ---- */
+  .overlay { position:absolute; inset:0; background:rgba(8,6,16,.72); display:none; align-items:center; justify-content:center; pointer-events:auto; }
+  .overlay .box { width:420px; padding:24px; text-align:center; }
+  .overlay h2 { font-size:26px; color:#ffb400; margin-bottom:10px; }
+  .overlay p { font-size:14px; line-height:1.5; color:#e8e2f5; margin-bottom:16px; }
+  .overlay button { pointer-events:auto; font-size:15px; font-weight:900; padding:11px 22px; border-radius:9px; border:1.5px solid #ffb400; background:#ff8c1a; color:#fff; cursor:pointer; margin:0 5px; }
+  #hitmarker { position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); font-size:26px; font-weight:900; color:#ff4d4d; text-shadow:0 2px 6px #000; display:none; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="hud" id="hud">
+  <div id="minimap-wrap">
+    <canvas id="minimap" width="300" height="300"></canvas>
+    <div id="street-label">ALUN-ALUN</div>
+    <div id="rep-row">Jl. Gamelan<br>REP FIXER · 1320 · LV. 4<div id="rep-bar"><div id="rep-fill"></div></div></div>
+  </div>
+
+  <div id="topright">
+    <div id="clock"><span class="day">DAY 1 ·</span> 18:41 · 1998</div>
+    <div id="money">$12,480</div>
+    <div id="stars"><span class="on">★★★★</span><span class="off">★</span></div>
+    <div id="sight-row"><span id="sight-badge">IN SIGHT</span> &nbsp;search zone follows you</div>
+    <div id="slots">
+      <div class="slot" data-w="0"><span class="num">0</span><svg viewBox="0 0 34 20"><path d="M6 4 h14 a4 4 0 0 1 4 4 v4 h-6 v-2 h-8 v6 h-4 z" fill="#ffd9a0"/></svg><span class="wname">FIST</span><span class="wammo">∞</span></div>
+      <div class="slot" data-w="1"><span class="num">1</span><svg viewBox="0 0 34 20"><path d="M4 4 h22 v6 h-12 v6 h-5 v-6 h-5 z" fill="#ffd9a0"/></svg><span class="wname">PISTOL</span><span class="wammo">12/60</span></div>
+      <div class="slot active" data-w="2"><span class="num">2</span><svg viewBox="0 0 34 20"><path d="M3 5 h24 v5 h-14 l-2 6 h-5 l2-6 h-5 z" fill="#fff"/></svg><span class="wname">SMG TAWON</span><span class="wammo">32/160</span></div>
+      <div class="slot" data-w="3"><span class="num">3</span><svg viewBox="0 0 34 20"><path d="M2 8 h28 v3 h-20 v5 h-4 v-5 h-4 z" fill="#8a7fb0"/></svg><span class="wname">SHOTGUN</span><span class="wammo">LOCKED</span></div>
+      <div class="slot" data-w="4"><span class="num">4</span><svg viewBox="0 0 34 20"><path d="M2 8 h28 v3 h-22 v6 h-4 v-6 h-2 z" fill="#8a7fb0"/></svg><span class="wname">RIFLE</span><span class="wammo">LOCKED</span></div>
+    </div>
+    <div id="active-weapon">SMG TAWON</div>
+    <div id="ammo-line">SMG TAWON · 32/160 ROUNDS</div>
+  </div>
+
+  <div id="bottomright">
+    <div id="radio-box">
+      <span class="eq"><i style="height:6px"></i><i style="height:14px"></i><i style="height:9px"></i><i style="height:16px"></i><i style="height:7px"></i></span>
+      <div class="st">♪ GAMELAN FM 101.1</div>
+      <div class="song">Bonang Malam — Gamelan Wilwatikta</div>
+    </div>
+    <div id="car-box">
+      <div class="cname">GARUDA GT</div>
+      <div class="cond">CONDITION <span id="cond-pct">100%</span></div>
+      <div id="cond-bar"><div id="cond-fill"></div></div>
+      <div id="speed-row"><span id="speed">97</span><span id="speed-unit">KM/H</span><span id="gear">G5</span></div>
+    </div>
+  </div>
+
+  <div id="mission" class="panel">
+    <h3>STORY MISSION</h3>
+    <h2 id="mission-title">MISSION 6/12 — BALAPAN SENJA</h2>
+    <p id="mission-desc">Checkpoint 1 of 4: Kalahkan 3 pembalap di Pantai Kidul.</p>
+    <div class="timer"><span id="mission-time">3:13</span><span id="mission-dist">▲ 168m</span></div>
+    <div class="mbar"><div class="mfill"></div></div>
+    <div class="next" id="mission-next">NEXT: GUDANG SEGARA<br>WPD DISPATCH: 2 unit mengejar —<br>HELI 2 — SPOTLIGHT — PANTAI KIDUL</div>
+    <div class="health-lbl">HEALTH</div>
+    <div id="health-bar"><div id="health-fill"></div></div>
+  </div>
+
+  <div id="dialogue" class="panel">
+    <canvas id="dlg-face" width="104" height="104"></canvas>
+    <div><div class="who"><b id="dlg-name">BAMBANG</b> <span id="dlg-role">MECHANIC · BENGKEL</span></div>
+    <div class="say" id="dlg-text">Your Garuda needs new brakes. Come by the bengkel.</div></div>
+  </div>
+
+  <div id="crew"></div>
+
+  <div id="title-screen">
+    <h1>WILWATIKTA</h1>
+    <h2>CERITA JALANAN · 1998</h2>
+    <div class="quote">"Setiap jalan punya harga. Setiap pelarian punya cerita."</div>
+    <div id="title-btns">
+      <button class="primary" id="btn-start">▶ MULAI</button>
+      <button id="btn-save">💾 SAVE</button>
+      <button id="btn-load">📁 LOAD</button>
+      <button id="btn-end">⏻ END GAME</button>
+    </div>
+    <div class="foot">WASD GERAK · MOUSE KAMERA · E MASUK MOBIL · KLIK TEMBAK · Q GANTI SENJATA · M PETA · R RADIO · U BENGKEL</div>
+    <div class="credit">WILWATIKTA 3D · KOTA WILWATIKTA · 1998<br>KARYA ORISINAL · DIBUAT UNTUK MAKE.FUN</div>
+  </div>
+
+  <div id="map-screen">
+    <h1>🗺 PETA WILWATIKTA — GPS AKTIF</h1>
+    <div id="map-cols">
+      <div id="map-missions" class="panel">
+        <h3>📄 STORY MISSIONS</h3>
+        <ol id="mission-list"></ol>
+        <div class="job"><b>CURRENT JOB</b><br><span class="gold" id="job-name">Balapan Senja</span><br><span id="job-desc">Checkpoint 1 of 4: KIDUL<br>GPS 202 m<br>M = TUTUP PETA · KLIK IKON UNTUK GPS</span></div>
+      </div>
+      <div id="map-districts"></div>
+      <div id="map-stats" class="panel">
+        <h3>📊 STATS</h3>
+        <table>
+          <tr><td>STORY</td><td>42%</td></tr>
+          <tr><td>REP</td><td>FIXER · 1320</td></tr>
+          <tr><td>CASH</td><td>$12,480</td></tr>
+          <tr><td>TIME</td><td>18:41 · DAY 1</td></tr>
+          <tr><td>WANTED</td><td>★★★★☆</td></tr>
+          <tr><td>TAKEDOWNS</td><td>14</td></tr>
+          <tr><td>CARS STOLEN</td><td>6</td></tr>
+          <tr><td>STUNTS</td><td>$2,150</td></tr>
+        </table>
+        <canvas id="map-ring" width="220" height="220"></canvas>
+        <div id="map-legend"><b style="color:#ffb400;letter-spacing:.12em">LEGENDA</b><br>
+        <i style="background:#ffb400"></i>Objective / Checkpoint<br>
+        <i style="background:#3b82f6"></i>WPD / Polisi<br>
+        <i style="background:#ef4444"></i>Musuh / Gang<br>
+        <i style="background:#22c55e"></i>Safehouse / Garage<br>
+        <i style="background:#f97316"></i>Crew / Kontak</div>
+      </div>
+    </div>
+    <div id="map-btns"><button id="btn-close-map">TUTUP [M]</button><button id="btn-to-title">TITLE</button></div>
+    <div id="map-crew"></div>
+  </div>
+
+  <div id="pause-screen" class="overlay"><div class="box panel">
+    <h2>PAUSE</h2><p>Game dijeda. Tekan ESC atau klik Lanjutkan untuk kembali ke jalanan Wilwatikta.</p>
+    <button id="btn-resume">LANJUTKAN</button><button id="btn-quit">TITLE</button>
+  </div></div>
+
+  <div id="upgrade-screen" class="overlay"><div class="box panel">
+    <h2>BENGKEL BAMBANG</h2><p>Garuda GT: rem baru terpasang, mesin disetel ulang. CONDITION kembali 100%. Biaya $350 — dibayar dari kas.</p>
+    <button id="btn-upgrade-done">SELESAI</button>
+  </div></div>
+
+  <div id="hitmarker">HIT! −12 HP</div>
+</div>
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
